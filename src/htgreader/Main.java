@@ -13,7 +13,9 @@ import java.nio.ShortBuffer;
 import java.nio.channels.FileChannel;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map.Entry;
 
 import javax.imageio.ImageIO;
 
@@ -27,7 +29,8 @@ public class Main {
     public static final int HGT_ROW_LENGTH = 3601; // number of elevation values per line
     public static final int HGT_VOID = -32768; // magic number which indicates 'void data' in HGT file	
 	
-    public static String filePath = "C:/Magno/DEMRJ/";
+    //public static String filePath = "C:/Magno/DEMRJ/";
+    public static String filePath = "G:/srtm/data/";
     public static String fileExt = ".hgt";
 	
     private static final HashMap<String, ShortBuffer> cache = new HashMap<>();
@@ -46,8 +49,7 @@ public class Main {
 		CellList cellList = new CellList(  getProfile( path ) );
 		System.out.println( cellList.asFeatureCollection() );
 		
-        //saveAsImage( data, cellList );
-        
+		saveAsImage( cellList );
 	}
 
 	
@@ -82,24 +84,23 @@ public class Main {
 		ShortBuffer data = readHgtFile( fileName );
 		
 		CellData cellData = latLonToCell(coord);
+		cellData.setFileName(fileName);
+		cellData.setLatLon(coord);
+		cellData.setEle( 0 );
 		int cell = cellData.getCellIndex();
 		
         if ( cell < data.limit() ) {
             short ele = data.get(cell);
 
-            if (ele == HGT_VOID) {
-            	System.out.println("No Elevation - VOID");
-            } else {
-            	cellData.setLatLon(coord);
+            if (ele != HGT_VOID) {
             	cellData.setEle(ele);
-            	cellData.setFileName(fileName);
-            	return cellData;
             }
             
         } else {
             System.out.println("No Elevation - Out of Range");
-        } 
-        return null;
+        }
+        
+        return cellData;
 	}
 	
     private static ShortBuffer readHgtFile(String fileName) throws Exception {
@@ -156,71 +157,82 @@ public class Main {
     }    
     
     
-    public static void saveAsImage( ShortBuffer data, CellList cellList ) throws Exception {
-    	BufferedImage bufferedImage = new BufferedImage(HGT_ROW_LENGTH, HGT_ROW_LENGTH, BufferedImage.TYPE_INT_ARGB);
-		Graphics2D g2d = bufferedImage.createGraphics();
+    public static void saveAsImage( CellList cellList ) throws Exception {
     	
-		g2d.setColor(Color.white);
-		g2d.fillRect(0, 0, HGT_ROW_LENGTH, HGT_ROW_LENGTH);		
-		
-		
-		for( int col = 0; col < HGT_ROW_LENGTH; col++  ) {
-			for( int row = HGT_ROW_LENGTH; row > 0 ; row--   ) {
-    			
-    			int cell = (HGT_ROW_LENGTH * (row - 1)) + col;
-    			short ele = data.get(cell);
-    			
-    			g2d.setColor( Color.WHITE );
-    			
-    			
-    			if( ele > 5 ) {
-    				g2d.setColor( new Color(249, 249, 249) );
-    			}
-    			if( ele > 10 ) {
-    				g2d.setColor( new Color(239, 239, 239) );
-    			}
-    			if( ele > 50 ) {
-    				g2d.setColor( new Color(229, 229, 229) );
-    			}
-    			if( ele > 100 ) {
-    				g2d.setColor( new Color(219, 219, 219) );
-    			}
-    			if( ele > 150 ) {
-    				g2d.setColor( new Color(209, 209, 209) );
-    			}
-    			
-    			if ( ele > 200 ) {
-    	    		if( ele > 1200 ) { ele = 1200; }
-    	    		int color = 255 - (ele / 5) ;
-    	    		g2d.setColor( new Color(color, color, color) );
-    			}
-    			
-    			
-    			g2d.drawLine(col,row,col,row);
-    			
-    		}
+        Iterator<Entry<String, ShortBuffer>> it = cache.entrySet().iterator();
+        while ( it.hasNext() ) {    	
+        	Entry<String, ShortBuffer> pair = it.next();
+        	
+    		String fileName = pair.getKey();
+    		ShortBuffer data = pair.getValue();
     		
-    	}
+    		System.out.println( fileName );
     	
-
-		Font font = new Font("Courier New", Font.PLAIN, 13);    
-		AffineTransform affineTransform = new AffineTransform();
-		affineTransform.rotate(Math.toRadians(45), 0, 0);
-		Font rotatedFont = font.deriveFont(affineTransform);
-		g2d.setFont(rotatedFont);
-		
-    	g2d.setColor( Color.RED );
-    	for ( CellData cellData : cellList.getCells() ) {
-    		g2d.drawLine( cellData.getCol(), cellData.getRow(), cellData.getCol() , cellData.getRow() - cellData.getEle() );
-            String s = String.valueOf( cellData.getEle() );
-            g2d.drawString( s, cellData.getCol(), cellData.getRow() );  
-            
-    	}
-    		
-		g2d.dispose();
-		File file = new File( filePath + "/image.png");
-		ImageIO.write(bufferedImage, "png", file);    	
-    	
+	    	BufferedImage bufferedImage = new BufferedImage(HGT_ROW_LENGTH, HGT_ROW_LENGTH, BufferedImage.TYPE_INT_ARGB);
+			Graphics2D g2d = bufferedImage.createGraphics();
+	    	
+			g2d.setColor(Color.white);
+			g2d.fillRect(0, 0, HGT_ROW_LENGTH, HGT_ROW_LENGTH);		
+			
+			
+			for( int col = 0; col < HGT_ROW_LENGTH; col++  ) {
+				for( int row = HGT_ROW_LENGTH; row > 0 ; row--   ) {
+	    			
+	    			int cell = (HGT_ROW_LENGTH * (row - 1)) + col;
+	    			short ele = data.get(cell);
+	    			
+	    			g2d.setColor( Color.WHITE );
+	    			
+	    			
+	    			if( ele > 5 ) {
+	    				g2d.setColor( new Color(249, 249, 249) );
+	    			}
+	    			if( ele > 10 ) {
+	    				g2d.setColor( new Color(239, 239, 239) );
+	    			}
+	    			if( ele > 50 ) {
+	    				g2d.setColor( new Color(229, 229, 229) );
+	    			}
+	    			if( ele > 100 ) {
+	    				g2d.setColor( new Color(219, 219, 219) );
+	    			}
+	    			if( ele > 150 ) {
+	    				g2d.setColor( new Color(209, 209, 209) );
+	    			}
+	    			
+	    			if ( ele > 200 ) {
+	    	    		if( ele > 1200 ) { ele = 1200; }
+	    	    		int color = 255 - (ele / 5) ;
+	    	    		g2d.setColor( new Color(color, color, color) );
+	    			}
+	    			
+	    			
+	    			g2d.drawLine(col,row,col,row);
+	    			
+	    		}
+	    		
+	    	}
+	    	
+	
+			Font font = new Font("Courier New", Font.PLAIN, 13);    
+			AffineTransform affineTransform = new AffineTransform();
+			affineTransform.rotate(Math.toRadians(45), 0, 0);
+			Font rotatedFont = font.deriveFont(affineTransform);
+			g2d.setFont(rotatedFont);
+			
+	    	g2d.setColor( Color.RED );
+	    	for ( CellData cellData : cellList.getCells() ) {
+	    		g2d.drawLine( cellData.getCol(), cellData.getRow(), cellData.getCol() , cellData.getRow() - cellData.getEle() );
+	            String s = String.valueOf( cellData.getEle() );
+	            g2d.drawString( s, cellData.getCol(), cellData.getRow() );  
+	            
+	    	}
+	    		
+			g2d.dispose();
+			File file = new File( filePath + fileName + ".png");
+			ImageIO.write(bufferedImage, "png", file);
+			
+    	}    	
 		
     }
     

@@ -14,7 +14,11 @@ public class CellList {
 	}
 	
 	public String asFeatureCollection() {
-		return "";
+		StringBuilder sb = new StringBuilder();
+		for( CellData cd : cells ) {
+			sb.append( cd.getAsFeature() );
+		}
+		return sb.toString();
 	}
 	
 }

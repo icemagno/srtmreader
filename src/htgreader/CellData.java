@@ -23,8 +23,8 @@ public class CellData {
 	
 	public String getAsFeature() {
 		String res = "{\"type\":\"Feature\",";
-		res = res + "\"geometry\":{\"type\":\"Point\",\"coordinates\":["+ latLon.getLat() + ","+ latLon.getLon() + "]},";
-		res = res + "\"properties\":{\"ele\":\""+ getEle()+"\"}}";
+		res = res + "\"geometry\":{\"type\":\"Point\",\"coordinates\":["+ getLatLon().getLat() + ","+ getLatLon().getLon() + "]},";
+		res = res + "\"properties\":{\"ele\":\""+ getEle()+"\", \"fileName\":\""+getFileName()+"\"}}";
 		return res;
 	}
 	
