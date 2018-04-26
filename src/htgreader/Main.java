@@ -46,7 +46,7 @@ public class Main {
 		CellList cellList = new CellList(  getProfile( path ) );
 		System.out.println( cellList.asFeatureCollection() );
 		
-        //saveAsImage( data, cells );
+        //saveAsImage( data, cellList );
         
 	}
 
@@ -144,7 +144,7 @@ public class Main {
     }    
     
     
-    public static void saveAsImage( ShortBuffer data, List<Cell> cells ) throws Exception {
+    public static void saveAsImage( ShortBuffer data, CellList cellList ) throws Exception {
     	BufferedImage bufferedImage = new BufferedImage(HGT_ROW_LENGTH, HGT_ROW_LENGTH, BufferedImage.TYPE_INT_ARGB);
 		Graphics2D g2d = bufferedImage.createGraphics();
     	
@@ -198,7 +198,7 @@ public class Main {
 		g2d.setFont(rotatedFont);
 		
     	g2d.setColor( Color.RED );
-    	for ( Cell cl : cells ) {
+    	for ( Cell cl : cellList.getCells() ) {
     		g2d.drawLine( cl.getCol(), cl.getRow(), cl.getCol() , cl.getRow() - cl.getEle() );
             String s = String.valueOf( cl.getEle() );
             g2d.drawString( s, cl.getCol(), cl.getRow() );  
