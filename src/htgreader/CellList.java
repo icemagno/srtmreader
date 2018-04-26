@@ -3,13 +3,13 @@ package htgreader;
 import java.util.List;
 
 public class CellList {
-	private List<Cell> cells;
+	private List<CellData> cells;
 	
-	public CellList( List<Cell> cells ) {
+	public CellList( List<CellData> cells ) {
 		this.cells = cells;
 	}
 	
-	public List<Cell> getCells() {
+	public List<CellData> getCells() {
 		return cells;
 	}
 	

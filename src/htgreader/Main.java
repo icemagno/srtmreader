@@ -51,37 +51,49 @@ public class Main {
 	}
 
 	
-	private static List<Cell> getProfile( List<LatLon> path ) throws Exception {
-		List<Cell> cells = new ArrayList<Cell>();
+	private static List<CellData> getProfile( List<LatLon> path ) throws Exception {
+		List<CellData> cells = new ArrayList<CellData>();
 		for( LatLon latLon : path ) {
-			Cell cell = readElevation( latLon );
+			CellData cell = readElevation( latLon );
 			cells.add(cell);
 		}
 		return cells;
 	}
 
-	
-	
-	private static Cell readElevation( LatLon coord ) throws Exception {
-		
-		String fileName = getHgtFileName( coord );
-		ShortBuffer data = readHgtFile( fileName );
-		
+	private static CellData latLonToCell( LatLon coord ) {
         double fLat = frac( Math.abs( coord.getLat() ) ) * SECONDS_PER_MINUTE;
         double fLon = frac( Math.abs( coord.getLon() ) ) * SECONDS_PER_MINUTE;		
         int row = (int) Math.round(fLat * SECONDS_PER_MINUTE / HGT_RES);
         int col = (int) Math.round(fLon * SECONDS_PER_MINUTE / HGT_RES);		
         row = HGT_ROW_LENGTH - row;
         int cell = (HGT_ROW_LENGTH * (row - 1)) + col;
-
+        
+        CellData cellData = new CellData();
+        cellData.setCellIndex( cell );
+        cellData.setCol(col);
+        cellData.setRow(row);
+        
+        return cellData;
+	}
+	
+	private static CellData readElevation( LatLon coord ) throws Exception {
+		
+		String fileName = getHgtFileName( coord );
+		ShortBuffer data = readHgtFile( fileName );
+		
+		CellData cellData = latLonToCell(coord);
+		int cell = cellData.getCellIndex();
+		
         if ( cell < data.limit() ) {
             short ele = data.get(cell);
 
             if (ele == HGT_VOID) {
             	System.out.println("No Elevation - VOID");
             } else {
-            	Cell res = new Cell( coord, ele, cell, row, col, fileName );
-            	return res;
+            	cellData.setLatLon(coord);
+            	cellData.setEle(ele);
+            	cellData.setFileName(fileName);
+            	return cellData;
             }
             
         } else {
@@ -198,10 +210,10 @@ public class Main {
 		g2d.setFont(rotatedFont);
 		
     	g2d.setColor( Color.RED );
-    	for ( Cell cl : cellList.getCells() ) {
-    		g2d.drawLine( cl.getCol(), cl.getRow(), cl.getCol() , cl.getRow() - cl.getEle() );
-            String s = String.valueOf( cl.getEle() );
-            g2d.drawString( s, cl.getCol(), cl.getRow() );  
+    	for ( CellData cellData : cellList.getCells() ) {
+    		g2d.drawLine( cellData.getCol(), cellData.getRow(), cellData.getCol() , cellData.getRow() - cellData.getEle() );
+            String s = String.valueOf( cellData.getEle() );
+            g2d.drawString( s, cellData.getCol(), cellData.getRow() );  
             
     	}
     		

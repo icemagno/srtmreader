@@ -1,6 +1,6 @@
 package htgreader;
 
-public class Cell {
+public class CellData {
 	private int ele;
 	private int cellIndex;
 	private int row;
@@ -8,7 +8,7 @@ public class Cell {
 	private String fileName;
 	private LatLon latLon;
 	
-	public Cell( LatLon latLon, int ele, int cellIndex, int row, int col, String fileName) {
+	public CellData( LatLon latLon, int ele, int cellIndex, int row, int col, String fileName) {
 		this.latLon = latLon;
 		this.ele = ele;
 		this.cellIndex = cellIndex;
@@ -17,6 +17,9 @@ public class Cell {
 		this.fileName = fileName;
 	}
 
+	public CellData() {
+		//
+	}
 	
 	public String getAsFeature() {
 		String res = "{\"type\":\"Feature\",";
