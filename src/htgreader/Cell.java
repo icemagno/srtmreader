@@ -1,28 +1,36 @@
 package htgreader;
 
 public class Cell {
-	private double lat;
-	private double lon;
 	private int ele;
 	private int cellIndex;
 	private int row;
 	private int col;
+	private String fileName;
+	private LatLon latLon;
 	
-	public Cell( Double lat, double lon, int ele, int cellIndex, int row, int col) {
-		this.lat = lat;
-		this.lon = lon;
+	public Cell( LatLon latLon, int ele, int cellIndex, int row, int col, String fileName) {
+		this.latLon = latLon;
 		this.ele = ele;
 		this.cellIndex = cellIndex;
 		this.row = row;
 		this.col = col;
+		this.fileName = fileName;
 	}
 
 	
 	public String getAsFeature() {
 		String res = "{\"type\":\"Feature\",";
-		res = res + "\"geometry\":{\"type\":\"Point\",\"coordinates\":["+getLat()+","+getLon()+"]},";
+		res = res + "\"geometry\":{\"type\":\"Point\",\"coordinates\":["+ latLon.getLat() + ","+ latLon.getLon() + "]},";
 		res = res + "\"properties\":{\"ele\":\""+ getEle()+"\"}}";
 		return res;
+	}
+	
+	public String getFileName() {
+		return fileName;
+	}
+	
+	public void setFileName(String fileName) {
+		this.fileName = fileName;
 	}
 	
 	public int getRow() {
@@ -49,20 +57,12 @@ public class Cell {
 		this.cellIndex = cellIndex;
 	}
 
-	public double getLat() {
-		return lat;
+	public LatLon getLatLon() {
+		return latLon;
 	}
 	
-	public void setLat(double lat) {
-		this.lat = lat;
-	}
-	
-	public double getLon() {
-		return lon;
-	}
-	
-	public void setLon(double lon) {
-		this.lon = lon;
+	public void setLatLon(LatLon latLon) {
+		this.latLon = latLon;
 	}
 	
 	public int getEle() {

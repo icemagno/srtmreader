@@ -2,7 +2,6 @@ package htgreader;
 
 import java.awt.Color;
 import java.awt.Font;
-import java.awt.FontMetrics;
 import java.awt.Graphics2D;
 import java.awt.geom.AffineTransform;
 import java.awt.image.BufferedImage;
@@ -13,6 +12,7 @@ import java.nio.ByteOrder;
 import java.nio.ShortBuffer;
 import java.nio.channels.FileChannel;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 
 import javax.imageio.ImageIO;
@@ -28,56 +28,47 @@ public class Main {
     public static final int HGT_VOID = -32768; // magic number which indicates 'void data' in HGT file	
 	
     public static String filePath = "C:/Magno/DEMRJ/";
+    public static String fileExt = ".hgt";
 	
-    private static int maxElevation = 0;
+    private static final HashMap<String, ShortBuffer> cache = new HashMap<>();
     
 	public static void main(String[] args)  throws Exception {
-		// START : -22.53666758280344, -42.05795827779525 
-		// MEIO  : -22.53952149577536, -42.03100744161361
-		// FIM   : -22.53381361084161, -42.00954976949447 
 		
-		double coorLat = -22.5;
-		double coorLon = -43.9;
+		// LatLon coord = new LatLon( -22.5, -43.9 );
+		// readElevation( latLon, data);
+
+		List<LatLon> path = new ArrayList<LatLon>(); 
+		for ( double lon = -43.9; lon < -43.1; lon = lon + 0.005  ) {
+			LatLon coorP = new LatLon( -22.5, lon );
+			path.add( coorP );
+		}	
 		
-		//String fileName = getHgtFileName(coorLat, coorLon);
+		CellList cellList = new CellList(  getProfile( path ) );
+		System.out.println( cellList.asFeatureCollection() );
 		
-		String fileName = "S23W044.hgt";
-		
-		String htgFile = filePath + fileName;
-		System.out.println( htgFile );
-		
-		ShortBuffer data = readHgtFile( htgFile );
-		
-		//readElevation(coorLat, coorLon, data);
-        
-		List<Cell> cells = getProfile( -22.5, -43.9, -22.5, -43.1, data );
-        saveAsImage( data, cells );
-        
-        System.out.println("Max Elevation found : " + maxElevation );
+        //saveAsImage( data, cells );
         
 	}
 
 	
-	private static List<Cell> getProfile( double coorLatS, double coorLonS, double coorLatF, double coorLonF, ShortBuffer data ) throws Exception {
+	private static List<Cell> getProfile( List<LatLon> path ) throws Exception {
 		List<Cell> cells = new ArrayList<Cell>();
-		
-		System.out.println("From: " + coorLonS + "  To: " + coorLonF);
-		
-		for ( double lon = coorLonS; lon < coorLonF; lon = lon + 0.005  ) {
-			Cell cell = readElevation( coorLatS, lon, data );
+		for( LatLon latLon : path ) {
+			Cell cell = readElevation( latLon );
 			cells.add(cell);
 		}
-		
 		return cells;
-		
 	}
 
 	
 	
-	private static Cell readElevation(double coorLat, double coorLon, ShortBuffer data ) throws Exception {
+	private static Cell readElevation( LatLon coord ) throws Exception {
 		
-        double fLat = frac( Math.abs(coorLat) ) * SECONDS_PER_MINUTE;
-        double fLon = frac( Math.abs(coorLon) ) * SECONDS_PER_MINUTE;		
+		String fileName = getHgtFileName( coord );
+		ShortBuffer data = readHgtFile( fileName );
+		
+        double fLat = frac( Math.abs( coord.getLat() ) ) * SECONDS_PER_MINUTE;
+        double fLon = frac( Math.abs( coord.getLon() ) ) * SECONDS_PER_MINUTE;		
         int row = (int) Math.round(fLat * SECONDS_PER_MINUTE / HGT_RES);
         int col = (int) Math.round(fLon * SECONDS_PER_MINUTE / HGT_RES);		
         row = HGT_ROW_LENGTH - row;
@@ -89,14 +80,7 @@ public class Main {
             if (ele == HGT_VOID) {
             	System.out.println("No Elevation - VOID");
             } else {
-            	Cell res = new Cell(coorLat, coorLon, ele, cell, row, col );
-            	
-            	if ( ele > maxElevation ) {
-            		maxElevation = ele;
-            	}
-            	
-            	System.out.println(coorLat + ";" + coorLon + ";" + ele);
-            	
+            	Cell res = new Cell( coord, ele, cell, row, col, fileName );
             	return res;
             }
             
@@ -106,32 +90,35 @@ public class Main {
         return null;
 	}
 	
-    private static ShortBuffer readHgtFile(String file) throws Exception {
+    private static ShortBuffer readHgtFile(String fileName) throws Exception {
+		String htgFile = filePath + fileName + fileExt;
 
-        FileChannel fc = null;
-        ShortBuffer sb = null;
-        try {
-            // Eclipse complains here about resource leak on 'fc' - even with 'finally' clause???
-            fc = new FileInputStream(file).getChannel();
-            // choose the right endianness
+		if ( cache.containsKey( fileName ) ) {
+			return cache.get( fileName );
+		}
+    	
+		cache.put(fileName, null);
+		
+        FileInputStream fis = new FileInputStream(htgFile);
+        FileChannel fc = fis.getChannel();
 
-            ByteBuffer bb = ByteBuffer.allocateDirect((int) fc.size());
-            while (bb.remaining() > 0) fc.read(bb);
+        ByteBuffer bb = ByteBuffer.allocateDirect((int) fc.size());
+        while (bb.remaining() > 0) fc.read(bb);
 
-            bb.flip();
-            //sb = bb.order(ByteOrder.LITTLE_ENDIAN).asShortBuffer();
-            sb = bb.order(ByteOrder.BIG_ENDIAN).asShortBuffer();
-        } finally {
-            if (fc != null) fc.close();
-        }
-
+        bb.flip();
+        ShortBuffer sb = bb.order(ByteOrder.BIG_ENDIAN).asShortBuffer();
+        
+        fc.close();
+        fis.close();
+        
+        cache.put(fileName, sb);
         return sb;
     }	
 	
 	
-    public static String getHgtFileName(double latD, double lonD) {
-        int lat = (int) latD;
-        int lon = (int) lonD;
+    public static String getHgtFileName( LatLon coord ) {
+        int lat = (int) coord.getLat();
+        int lon = (int) coord.getLon();
         String latPref = "N";
         if (lat < 0) latPref = "S";
 
@@ -143,7 +130,7 @@ public class Main {
         if ( lonT.length() == 2 ) {
         	lonT = "0" + lonT;
         }
-        String ret = latPref + lat + lonPref + lonT + ".hgt";
+        String ret = latPref + lat + lonPref + lonT;
         return ret.replace("-", "");
     }	
 	
