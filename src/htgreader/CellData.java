@@ -7,6 +7,7 @@ public class CellData {
 	private int col;
 	private String fileName;
 	private LatLon latLon;
+	private boolean visible;
 	
 	public CellData( LatLon latLon, int ele, int cellIndex, int row, int col, String fileName) {
 		this.latLon = latLon;
@@ -19,6 +20,14 @@ public class CellData {
 
 	public CellData() {
 		//
+	}
+	
+	public boolean isVisible() {
+		return this.visible;
+	}
+	
+	public void setVisible(boolean visible) {
+		this.visible = visible;
 	}
 	
 	public String getAsFeature() {
