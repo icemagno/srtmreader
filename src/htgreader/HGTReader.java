@@ -25,6 +25,8 @@ import java.util.Map.Entry;
 
 import javax.imageio.ImageIO;
 
+import com.sun.org.apache.bcel.internal.generic.GETFIELD;
+
 
 
 public class HGTReader {
@@ -35,6 +37,7 @@ public class HGTReader {
 	private final int HGT_ROW_LENGTH = 3601; // number of elevation values per line
 	private final int HGT_VOID = -32768; // magic number which indicates 'void data' in HGT file	
 	private final String USER_AGENT = "Mozilla/5.0 (X11; U; Linux x86_64; en-US; rv:1.9.2.13) Gecko/20101206 Ubuntu/10.10 (maverick) Firefox/3.6.13";
+	private final int EARTH_RADIUS = 6371; // Approx Earth radius in KM
 	
 	private String srtmPath;
 	private String fileExt = ".hgt";
@@ -55,6 +58,114 @@ public class HGTReader {
 		}
 		return cells;
 	}
+	
+	public LatLon projectPoint( LatLon center, double distance, double bearing ) {
+		// http://www.movable-type.co.uk/scripts/latlong.html
+			
+		double radius = 6371;
+		
+		double delta = distance / radius;
+		double theta = Math.toRadians( bearing );
+		
+		double phi1 = Math.toRadians( center.getLat() );
+		double lambda1 = Math.toRadians( center.getLon() );
+		
+		double sinPhi1 = Math.sin(phi1);
+		double cosPhi1 = Math.cos(phi1);
+		
+		double sindelta = Math.sin(delta); 
+		double cosdelta = Math.cos(delta);
+		double sinTheta = Math.sin(theta); 
+		double cosTheta = Math.cos(theta);
+		
+		double sinPhi2 = sinPhi1 * cosdelta + cosPhi1 * sindelta * cosTheta;
+		double phi2 = Math.asin(sinPhi2);
+		double y = sinTheta * sindelta * cosPhi1;
+		double x = cosdelta - sinPhi1 * sinPhi2;
+		double lambda2 = lambda1 + Math.atan2(y, x);		
+				
+		return new LatLon( Math.toDegrees(phi2), ( Math.toDegrees(lambda2) +540 ) % 360-180 ); 
+	}
+	
+    public double calcDistance( LatLon start,  LatLon end) {
+
+		double dLat  = Math.toRadians( ( end.getLat() - start.getLat() ) );
+		double dLong = Math.toRadians( ( end.getLon() - start.getLon() ) );
+		
+		double startLat = Math.toRadians( start.getLat() );
+		double endLat   = Math.toRadians( end.getLat() );
+		
+		double a = haversin(dLat) + Math.cos(startLat) * Math.cos(endLat) * haversin(dLong);
+		double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+		
+		return EARTH_RADIUS * c; // <-- d
+	}
+		
+	private double haversin(double val) {
+		return Math.pow(Math.sin(val / 2), 2);
+	}
+	
+	
+	
+	public void computeViewShed( LatLon coord, double distance, String exportPath ) throws Exception {
+		System.out.println("Calculating viewshad...");
+		System.out.println(" > Observer at " + coord.toString() );
+		
+		CellData observerElevation = readElevation(coord);
+		
+		System.out.println(" > Observer elevation: " + observerElevation.getEle() );
+		
+		System.out.println(" > Center coordinates : " + coord.toString()  );
+		
+		LatLon temp = projectPoint( coord, distance, 180);  
+		System.out.println(" > Projecting point to 180 degres at " + distance + " Km : " + temp.toString() );
+		
+		int centerPixelCol = latLonToCell( coord ).getCol();
+		int centerPixelRow = latLonToCell( coord ).getRow();
+		
+		int borderPixelCol = latLonToCell( temp ).getCol();
+		int borderPixelRow = latLonToCell( temp ).getRow();
+		
+		int deltaCol = borderPixelCol - centerPixelCol;
+		int deltaRow = borderPixelRow - centerPixelRow;
+		
+		System.out.println(" > Center : " + centerPixelCol + "," + centerPixelRow );
+		System.out.println(" > Border : " + borderPixelCol + "," + borderPixelRow );
+		System.out.println(" > Distance in pixels : " + deltaCol + ", " + deltaRow );
+		
+		
+		
+		// ----------------  PROCEDIMENTO PARA SALVAR IMAGEM --------------------------------------------------------
+		String fileName = observerElevation.getFileName();
+		
+		// Usa quadro branco
+    	BufferedImage bufferedImage = new BufferedImage(HGT_ROW_LENGTH, HGT_ROW_LENGTH, BufferedImage.TYPE_INT_RGB);
+		Graphics2D g2d = bufferedImage.createGraphics();
+		g2d.setColor( Color.WHITE );
+		g2d.fillRect(0, 0, HGT_ROW_LENGTH, HGT_ROW_LENGTH);				
+		
+
+		/*  Usa Mapa de fundo OSM
+		String bbox = getTileBBox( fileName );
+		saveImage( exportPath + "viewshad_map.jpg", HGT_ROW_LENGTH, "osm:OSMMapa", bbox );		
+		BufferedImage bufferedImage = ImageIO.read( new File(exportPath + "viewshad_map.jpg") );
+		Graphics2D g2d = bufferedImage.createGraphics();
+		*/
+		
+		g2d.setComposite(AlphaComposite.Src);
+		
+		g2d.setColor( Color.RED );
+		g2d.drawLine(centerPixelCol,centerPixelRow,borderPixelCol,borderPixelRow);
+		
+		g2d.dispose();
+		
+		File file = new File( exportPath + "viewshad.png");
+		ImageIO.write(bufferedImage, "png", file);			
+		
+		System.out.println("Done.");
+		
+	}
+	
 
 	private  CellData latLonToCell( LatLon coord ) {
         double fLat = frac( Math.abs( coord.getLat() ) ) * SECONDS_PER_MINUTE;

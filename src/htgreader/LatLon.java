@@ -17,5 +17,9 @@ public class LatLon {
 		return lon;
 	}
 	
+	@Override
+	public String toString() {
+		return String.valueOf(lat) + ", " + String.valueOf(lon);
+	}
 	
 }
