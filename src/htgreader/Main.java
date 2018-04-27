@@ -11,7 +11,7 @@ public class Main {
 		String exportPath = "C:/Magno/DEMRJ/";
 		HGTReader reader = new HGTReader( "C:/Magno/Magno/SRTM1v3.0/", "http://osm.casnav.mb/osmope/wms/" );
 
-		LatLon coord = new LatLon( -22.80, -43.22 );
+		LatLon coord = new LatLon( -22.744744, -43.492753 );
 		// readElevation( latLon, data);
 
 		List<LatLon> path = new ArrayList<LatLon>(); 
@@ -28,7 +28,7 @@ public class Main {
 		
 		// System.out.println( reader.calcDistance( coord , reader.projectPoint(coord, 0.5, 90) ) );
 		
-		reader.computeViewShed( coord, 5, exportPath );
+		reader.computeViewShed( coord, 10, exportPath );
 		
 		//System.out.println( cellList.asFeatureCollection() );
 		//reader.saveAsImage( exportPath, cellList );

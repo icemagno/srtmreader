@@ -112,6 +112,8 @@ public class HGTReader {
 		System.out.println(" > Observer at " + coord.toString() );
 		
 		CellData observerElevation = readElevation(coord);
+		ShortBuffer data = readHgtFile( observerElevation.getFileName() );
+		
 		
 		System.out.println(" > Observer elevation: " + observerElevation.getEle() );
 		
@@ -126,39 +128,104 @@ public class HGTReader {
 		int borderPixelCol = latLonToCell( temp ).getCol();
 		int borderPixelRow = latLonToCell( temp ).getRow();
 		
-		int deltaCol = borderPixelCol - centerPixelCol;
-		int deltaRow = borderPixelRow - centerPixelRow;
+		//int deltaCol = centerPixelCol - borderPixelCol; 
+		int deltaRow = centerPixelRow - borderPixelRow;
+		
+		
 		
 		System.out.println(" > Center : " + centerPixelCol + "," + centerPixelRow );
 		System.out.println(" > Border : " + borderPixelCol + "," + borderPixelRow );
-		System.out.println(" > Distance in pixels : " + deltaCol + ", " + deltaRow );
+		System.out.println(" > Distance in pixels : " + deltaRow );
+		
 		
 		
 		
 		// ----------------  PROCEDIMENTO PARA SALVAR IMAGEM --------------------------------------------------------
 		String fileName = observerElevation.getFileName();
-		
 		// Usa quadro branco
     	BufferedImage bufferedImage = new BufferedImage(HGT_ROW_LENGTH, HGT_ROW_LENGTH, BufferedImage.TYPE_INT_RGB);
 		Graphics2D g2d = bufferedImage.createGraphics();
 		g2d.setColor( Color.WHITE );
 		g2d.fillRect(0, 0, HGT_ROW_LENGTH, HGT_ROW_LENGTH);				
-		
-
 		/*  Usa Mapa de fundo OSM
 		String bbox = getTileBBox( fileName );
 		saveImage( exportPath + "viewshad_map.jpg", HGT_ROW_LENGTH, "osm:OSMMapa", bbox );		
 		BufferedImage bufferedImage = ImageIO.read( new File(exportPath + "viewshad_map.jpg") );
 		Graphics2D g2d = bufferedImage.createGraphics();
 		*/
-		
 		g2d.setComposite(AlphaComposite.Src);
 		
+		
+		// DESENHA O Modelo Digital de Elevacao
+		for( int col = 0; col < HGT_ROW_LENGTH; col++  ) {
+			for( int row = HGT_ROW_LENGTH; row > 0 ; row--   ) {
+    			
+    			int cell = (HGT_ROW_LENGTH * (row - 1)) + col;
+    			short ele = data.get(cell);
+    			g2d.setColor( Color.WHITE );
+    			if( ele > 5 ) {
+    				g2d.setColor( new Color(249, 249, 249) );
+    			}
+    			if( ele > 10 ) {
+    				g2d.setColor( new Color(239, 239, 239) );
+    			}
+    			if( ele > 50 ) {
+    				g2d.setColor( new Color(229, 229, 229) );
+    			}
+    			if( ele > 100 ) {
+    				g2d.setColor( new Color(219, 219, 219) );
+    			}
+    			if( ele > 150 ) {
+    				g2d.setColor( new Color(209, 209, 209) );
+    			}
+    			
+    			if ( ele > 200 ) {
+    	    		if( ele > 1200 ) { ele = 1200; }
+    	    		int color = 255 - (ele / 5) ;
+    	    		g2d.setColor( new Color(color, color, color) );
+    			}
+    			g2d.drawLine(col,row,col,row);
+    		}
+    	}		
+		
+		
+		
+		// Desenha o VIEWSHAD
 		g2d.setColor( Color.RED );
-		g2d.drawLine(centerPixelCol,centerPixelRow,borderPixelCol,borderPixelRow);
+		for( int tempRadius = 0; tempRadius <= deltaRow; tempRadius++  ) {
+			int tallestPoint = -1;
+			
+			int observerEle = observerElevation.getEle(); 
+			
+			for ( int angle = 0; angle < 360; angle+= 2 ) {
+				int x = (int) (centerPixelCol + tempRadius * Math.cos( angle ) );
+				int y = (int) ( centerPixelRow + tempRadius * Math.sin( angle ) );
+				
+				int cell = (HGT_ROW_LENGTH * (y - 1)) + x;
+				short ele = data.get(cell);
+				boolean canSee = true;
+				
+				
+				if ( (ele > tallestPoint) ) {
+					tallestPoint = ele; 
+				}
+				
+				if ( (ele < tallestPoint) && ( ele > observerEle ) ) canSee = false;
+				
+				
+				// ------------------ SO DESENHA o PIXEL SE PUDER VER ------------------------
+				if ( canSee ) {
+					g2d.drawLine( x, y, x, y ); // <<< -- DESENHA UM PIXEL VERMELHO
+				}
+				
+				
+			}
+		}
+		
+		
+		
 		
 		g2d.dispose();
-		
 		File file = new File( exportPath + "viewshad.png");
 		ImageIO.write(bufferedImage, "png", file);			
 		
