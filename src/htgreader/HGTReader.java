@@ -143,11 +143,13 @@ public class HGTReader {
 		// ----------------  PROCEDIMENTO PARA SALVAR IMAGEM --------------------------------------------------------
 		String fileName = observerElevation.getFileName();
 		// Usa quadro branco
-    	BufferedImage bufferedImage = new BufferedImage(HGT_ROW_LENGTH, HGT_ROW_LENGTH, BufferedImage.TYPE_INT_RGB);
+		BufferedImage bufferedImage = new BufferedImage(HGT_ROW_LENGTH, HGT_ROW_LENGTH, BufferedImage.TYPE_INT_RGB);
 		Graphics2D g2d = bufferedImage.createGraphics();
 		g2d.setColor( Color.WHITE );
-		g2d.fillRect(0, 0, HGT_ROW_LENGTH, HGT_ROW_LENGTH);				
-		/*  Usa Mapa de fundo OSM
+		g2d.fillRect(0, 0, HGT_ROW_LENGTH, HGT_ROW_LENGTH);		
+		
+		//  Usa Mapa de fundo OSM
+		/*
 		String bbox = getTileBBox( fileName );
 		saveImage( exportPath + "viewshad_map.jpg", HGT_ROW_LENGTH, "osm:OSMMapa", bbox );		
 		BufferedImage bufferedImage = ImageIO.read( new File(exportPath + "viewshad_map.jpg") );
@@ -157,6 +159,7 @@ public class HGTReader {
 		
 		
 		// DESENHA O Modelo Digital de Elevacao
+		
 		for( int col = 0; col < HGT_ROW_LENGTH; col++  ) {
 			for( int row = HGT_ROW_LENGTH; row > 0 ; row--   ) {
     			
